@@ -4,8 +4,7 @@ struct GameView: View {
 
     let selectedLevel: String
 
-    // MARK: - Attempts
-
+    // MARK: - Game Config
     var maxAttempts: Int {
         switch selectedLevel {
         case "Easy": return 5
@@ -14,17 +13,6 @@ struct GameView: View {
         default: return 5
         }
     }
-
-    var SelectLeveltext: String {
-        switch selectedLevel {
-        case "Easy": return "You have 5 attempts to select a tile"
-        case "Medium": return "You have 7 attempts to select a tile"
-        case "Hard": return "You have 9 attempts to select a tile"
-        default: return "You have 5 attempts to select a tile"
-        }
-    }
-
-    // MARK: - Grid Settings
 
     var gridSize: Int {
         switch selectedLevel {
@@ -51,13 +39,17 @@ struct GameView: View {
     }
 
     // MARK: - State
-
     @State private var revealed: [Bool]
     @State private var rotation: [Double]
     @State private var remainingAttempts: Int
+    @State private var gameMessage: String = ""
+    @State private var gameOver: Bool = false
+    @State private var didWin: Bool = false
+    @State private var selectedColors: [Color] = []
+    @State private var showResultBanner: Bool = false
+
 
     // MARK: - Init
-
     init(selectedLevel: String) {
         self.selectedLevel = selectedLevel
 
@@ -66,17 +58,13 @@ struct GameView: View {
 
         switch selectedLevel {
         case "Easy":
-            size = 3
-            attempts = 5
+            size = 3; attempts = 5
         case "Medium":
-            size = 4
-            attempts = 7
+            size = 4; attempts = 7
         case "Hard":
-            size = 5
-            attempts = 9
+            size = 5; attempts = 9
         default:
-            size = 3
-            attempts = 5
+            size = 3; attempts = 5
         }
 
         _revealed = State(initialValue: Array(repeating: false, count: size * size))
@@ -84,8 +72,7 @@ struct GameView: View {
         _remainingAttempts = State(initialValue: attempts)
     }
 
-    // MARK: - Card Assets
-
+    // MARK: - Helpers
     var cardImageName: String {
         switch selectedLevel {
         case "Easy": return "fox_card"
@@ -97,19 +84,23 @@ struct GameView: View {
 
     func cardColor(index: Int) -> Color {
         switch selectedLevel {
-        case "Easy":
-            return [.red, .green, .blue][index % 3]
-        case "Medium":
-            return [.orange, .pink, .purple, .teal][index % 4]
-        case "Hard":
-            return [.mint, .cyan, .indigo, .brown, .green][index % 5]
-        default:
-            return .gray
+        case "Easy": return [.red, .green, .blue][index % 3]
+        case "Medium": return [.orange, .pink, .purple, .teal][index % 4]
+        case "Hard": return [.mint, .cyan, .indigo, .brown, .green][index % 5]
+        default: return .gray
         }
     }
 
-    // MARK: - View
+    func requiredMatchCount() -> Int {
+        switch selectedLevel {
+        case "Easy": return 3
+        case "Medium": return 4
+        case "Hard": return 5
+        default: return 3
+        }
+    }
 
+    // MARK: - UI
     var body: some View {
         ZStack {
 
@@ -126,31 +117,62 @@ struct GameView: View {
                         .fontWeight(.bold)
                         .foregroundColor(.white)
 
-                    Text(SelectLeveltext)
+                    Text(gameMessage.isEmpty ? "Attempts left: \(remainingAttempts)" : gameMessage)
+                        .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(gameMessage.contains("won") ? .green : .white)
 
-                    // ❤️ Hearts in a ROW
-                    HStack(spacing: 10) {
-                        ForEach(0..<remainingAttempts, id: \.self) { _ in
-                            Image("heart")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 40, height: 40)
+                    // ❤️ Attempts Indicator
+                    let heartsPerRow = 5
+                    VStack(spacing: 8) {
+                        ForEach(0..<Int(ceil(Double(remainingAttempts) / Double(heartsPerRow))), id: \.self) { row in
+                            HStack(spacing: 10) {
+                                ForEach(0..<min(heartsPerRow, remainingAttempts - row * heartsPerRow), id: \.self) { _ in
+                                    Image("heart")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 40, height: 40)
+                                }
+                            }
                         }
                     }
-                    .padding(.vertical, 8)
 
-                    // 🟦 Cards Grid
+                    // 🟦 Card Grid
                     LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(0..<totalBoxes, id: \.self) { index in
                             Button {
-                                guard remainingAttempts > 0 else { return }
+                                guard remainingAttempts > 0, !gameOver else { return }
+
+                                let color = cardColor(index: index)
 
                                 withAnimation(.linear(duration: 0.4)) {
                                     rotation[index] += 180
-                                    revealed[index].toggle()
+                                    revealed[index] = true
                                     remainingAttempts -= 1
+                                    selectedColors.append(color)
+                                }
+
+                                let sameColorCount = selectedColors.filter { $0 == color }.count
+
+                                // ✅ WIN
+                                if sameColorCount == requiredMatchCount() {
+                                    gameMessage = "🎉 Congratulations! You have won!"
+                                    didWin = true
+                                    gameOver = true
+                                    withAnimation(.spring(response: 0.6, dampingFraction: 0.3)) {
+                                           showResultBanner = true
+                                       }
+                                    return
+                                }
+
+                                // ❌ LOSE
+                                if remainingAttempts == 0 {
+                                    gameMessage = "❌ You lost the game. Better luck next time!"
+                                    didWin = false
+                                    gameOver = true
+                                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                                           showResultBanner = true
+                                       }
                                 }
                             } label: {
                                 ZStack {
@@ -180,11 +202,34 @@ struct GameView: View {
                     .padding()
                 }
             }
+
+            // 🏆 WIN / LOSE OVERLAY (CORRECT PLACE)
+            if gameOver {
+                ZStack {
+                    Color.black.opacity(showResultBanner ? 0.6 : 0)
+                        .ignoresSafeArea()
+
+                    if didWin {
+                        Winbanner()
+                            .scaleEffect(showResultBanner ? 1 : 0.8)
+                            .opacity(showResultBanner ? 1 : 0)
+                            .offset(y: showResultBanner ? 0 : 40)
+                    } else {
+                        Losebanner()
+                            .scaleEffect(showResultBanner ? 1 : 0.8)
+                            .opacity(showResultBanner ? 1 : 0)
+                            .offset(y: showResultBanner ? 0 : 40)
+                    }
+                }
+                .animation(.spring(response: 0.5, dampingFraction: 0.7), value: showResultBanner)
+                .zIndex(10)
+            }
+
         }
     }
 }
 
 #Preview {
-    GameView(selectedLevel: "Hard")
+    GameView(selectedLevel: "Medium")
 }
 

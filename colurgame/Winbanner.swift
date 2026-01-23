@@ -2,76 +2,100 @@ import SwiftUI
 
 struct Winbanner: View {
 
+    // MARK: - Inputs
+    let selectedLevel: String
+    let finalScore: Int
+    let resultMessage: String
+    let previousBestScore: Int
+    let didImprove: Bool
+
+    let onRetry: () -> Void
+    let onPlayAgain: () -> Void
+
+    // MARK: - UI
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
 
-                // Background
-                Image("win_lose_background")
+            // 🔲 Dimmed background
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+
+            // 🎴 Popup Card
+            VStack(spacing: 14) {
+
+                // GAME OVER image
+                Image("game_over")
                     .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
+                    .scaledToFit()
+                    .frame(width: 190)
 
-                VStack(spacing: -42) {
+                // Final Score
+                Text("FINAL SCORE: \(finalScore)")
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
 
-                    // MARK: - Win Banner
-                    ZStack {
-                        Image("win_banner")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 480, height: 280)
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
-                            .offset(y: 130)
-                            .zIndex(9)
-
-                        Image("background_tile")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 480, height: 380)
-                            .cornerRadius(15)
-                            .shadow(radius: 5)
-                            .offset(y: 330)
-                            .zIndex(2)
-
-                        Text("Congratulations")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.white)
-                            .offset(y: 230)
-                            .zIndex(10)
-
-                        Text("You have won the game")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
-                            .offset(y: 260)
-                            .zIndex(10)
-                    }
-
-                    // MARK: - Back to Home Button
-                    NavigationLink {
-                        LevelSelectView()
-                    } label: {
-                        Image("back_to_home")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 220, height: 250)
-                            .cornerRadius(14)
-                            .shadow(
-                                color: .black.opacity(0.5),
-                                radius: 4, x: 0, y: 1
-                            )
-                    }
-                    .offset(y: 120)
-
-                    Spacer()
+                // ✅ IMPROVEMENT MESSAGE
+                if didImprove {
+                    Text("🎉 You have improved your sight!")
+                        .font(.headline)
+                        .foregroundColor(.yellow)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
                 }
-                .padding()
+
+                // Previous best score
+                if previousBestScore > 0 {
+                    Text("Previous Best: \(previousBestScore)")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.9))
+                }
+
+                // Result message
+                Text(resultMessage)
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.white)
+                    .padding(.horizontal)
+
+                // Buttons (IMAGE BASED)
+                VStack(spacing: 14) {
+
+                    Button(action: onRetry) {
+                        Image("try_again_button")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 54)
+                            .shadow(radius: 4)
+                    }
+
+                    Button(action: onPlayAgain) {
+                        Image("play_again_button")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 54)
+                            .shadow(radius: 4)
+                    }
+                }
+                .padding(.horizontal)
             }
+            .frame(width: 300, height: 420)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 254/255, green: 175/255, blue: 191/255), // #FEAFBF
+                                Color(red: 231/255, green: 115/255, blue: 102/255)  // #E77366
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+            )
+            .shadow(radius: 20)
         }
     }
-}
-
-#Preview {
-    Winbanner()
 }
 

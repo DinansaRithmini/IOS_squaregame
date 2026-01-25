@@ -47,6 +47,10 @@ struct GameScreen: View {
     @State private var didImprove: Bool = false
     
     @State private var showInfo = false
+    
+    
+    @AppStorage("hasSeenTutorial") private var hasSeenTutorial: Bool = false
+    @State private var showTutorial = false
 
 
     // HARD MODE GROUP SCORES
@@ -110,7 +114,7 @@ struct GameScreen: View {
                 VStack {
                     HStack {
                         Spacer()
-
+                        
                         Button {
                             showInfo = true   // later you can show popup
                         } label: {
@@ -119,13 +123,17 @@ struct GameScreen: View {
                                 .scaledToFit()
                                 .frame(width: 120, height: 44)
                         }
+                        
+                        Button("How to Play")
+                        {showTutorial = true
+                        }
                         .padding(.trailing, 16)
                         .padding(.top, 16)
                     }
-
+                    
                     Spacer()
                 }
-
+                
                 
                 VStack(spacing: 14) {
                     
@@ -227,6 +235,13 @@ struct GameScreen: View {
             .onDisappear {
                 timer?.invalidate()
             }
+            
+            .onAppear {
+                if !hasSeenTutorial {
+                    showTutorial = true
+                    hasSeenTutorial = true
+                }
+            }
             .overlay {
                 if navigateToWin {
                     Winbanner(
@@ -248,6 +263,11 @@ struct GameScreen: View {
                     )
                 }
             }
+            
+            TutorialOverlay(
+            steps: tutorialSteps,
+            isShowing: $showTutorial)
+        }
 
             .overlay {
                 if showInfo {
@@ -258,7 +278,7 @@ struct GameScreen: View {
             }
 
         }
-    }
+    
 
 
     // MARK: - TIMER
@@ -422,6 +442,20 @@ let hardColors: [Color] = [
     Color(red: 0.8, green: 0.2, blue: 0.2),
     Color(red: 0.9, green: 0.4, blue: 0.3),
     Color(red: 0.7, green: 0.3, blue: 0.2)
+]
+
+let tutorialSteps = [
+    TutorialStep(
+        title:"Objective",
+        description: "Tap the correct title toscore points"
+        ),
+    TutorialStep(
+        title:"Timer",
+        description: "Finish the level before time runs out."),
+    TutorialStep(
+        title: "Score",
+        description: "Faster the correct answers give hinger scores")
+    
 ]
 
 // MARK: - PREVIEW
